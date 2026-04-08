@@ -23,6 +23,16 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.AsyncDownloadApp
         SWIFT_VERSION: "5.9"
         INFOPLIST_FILE: AsyncDownloadApp/Info.plist
+    preBuildScripts:
+      - name: Regenerate Mocks
+        script: |
+          cd "$SRCROOT/Packages/DownloadManager"
+          if which mint > /dev/null; then
+            mint run sourcery --disableCache
+          else
+            echo "warning: Mint not installed, skipping mock generation"
+          fi
+        basedOnDependencyAnalysis: false
     info:
       path: AsyncDownloadApp/Info.plist
       properties:

@@ -24,6 +24,9 @@ DerivedData/
 # Sourcery
 # (generated files are committed intentionally)
 
+# Mint
+.mint/
+
 # macOS
 .DS_Store
 .AppleDouble
