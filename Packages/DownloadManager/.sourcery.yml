@@ -1,0 +1,9 @@
+sources:
+  - Sources/DownloadManager
+
+templates:
+  - Sourcery/Templates/AutoMockable.stencil
+
+output:
+  path: Tests/DownloadManagerTests/Generated
+  link: false
