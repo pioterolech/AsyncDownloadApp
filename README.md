@@ -1,5 +1,7 @@
 # AsyncDownload
 
+[![Tests](https://github.com/piotrolech/AsyncDownloadApp/actions/workflows/tests.yml/badge.svg)](https://github.com/piotrolech/AsyncDownloadApp/actions/workflows/tests.yml)
+
 An iOS app built to exercise modern Swift concurrency within a file downloading scenario — and to explore Claude's capabilities as a coding assistant.
 
 ## Features
