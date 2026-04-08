@@ -55,8 +55,8 @@ public actor DownloadManager {
         let tempURL = storage.createTempFile(for: id)
 
         do {
-            try await streamer.fetch(from: download.url, into: tempURL) { [self] received, total in
-                await updateProgress(id: id, received: received, total: total)
+            try await streamer.fetch(from: download.url, into: tempURL) { received, total in
+                updateProgress(id: id, received: received, total: total)
             }
             let destURL = try storage.moveToDocuments(
                 from: tempURL,

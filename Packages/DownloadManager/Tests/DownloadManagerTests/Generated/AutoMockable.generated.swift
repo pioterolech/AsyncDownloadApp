@@ -58,18 +58,18 @@ final class NetworkBytesFetcherProtocolMock: NetworkBytesFetcherProtocol, @unche
     var fetchCallCount = 0
     var fetchReceivedUrl: URL?
     var fetchReceivedFileurl: URL?
-    var fetchReceivedOnprogress: ((Int64, Int64) async -> Void)?
     var fetchThrowableError: Error?
     var fetchHandler: ((URL, URL, (Int64, Int64) async -> Void) async throws -> Void)?
 
-    func fetch(from url: URL, into fileURL: URL, onProgress: @escaping (Int64, Int64) async -> Void) async throws {
+    func fetch(from url: URL, into fileURL: URL, onProgress: (Int64, Int64) async -> Void) async throws {
         fetchCallCount += 1
         fetchReceivedUrl = url
         fetchReceivedFileurl = fileURL
-        fetchReceivedOnprogress = onProgress
         if let error = fetchThrowableError { throw error }
         if let handler = fetchHandler {
-            try await handler(url, fileURL, onProgress)
+            try await withoutActuallyEscaping(onProgress) { escaping in
+                try await handler(url, fileURL, escaping)
+            }
         }
     }
 }

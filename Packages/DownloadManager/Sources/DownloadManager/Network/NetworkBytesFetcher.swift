@@ -5,7 +5,7 @@ public protocol NetworkBytesFetcherProtocol {
     func fetch(
         from url: URL,
         into fileURL: URL,
-        onProgress: @escaping (Int64, Int64) async -> Void
+        onProgress: (Int64, Int64) async -> Void
     ) async throws
 }
 
@@ -20,7 +20,7 @@ final class NetworkBytesFetcher: NetworkBytesFetcherProtocol {
     func fetch(
         from url: URL,
         into fileURL: URL,
-        onProgress: @escaping (Int64, Int64) async -> Void
+        onProgress: (Int64, Int64) async -> Void
     ) async throws {
         let fileHandle = try FileHandle(forWritingTo: fileURL)
         defer { try? fileHandle.close() }
