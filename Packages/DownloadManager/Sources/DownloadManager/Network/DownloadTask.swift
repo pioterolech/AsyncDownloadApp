@@ -4,14 +4,14 @@ actor DownloadTask: DownloadTaskProtocol {
 
     private let session: any URLSessionProtocol
     private let storage: any FileStorageProtocol
-    private var states: [Int: AsyncThrowingStream<DownloadEvent, Error>.Continuation] = [:]
+    private var states: [Int: AsyncThrowingStream<DownloadTaskEvent, Error>.Continuation] = [:]
 
     init(session: any URLSessionProtocol, storage: any FileStorageProtocol) {
         self.session = session
         self.storage = storage
     }
 
-    func fetch(from url: URL) -> AsyncThrowingStream<DownloadEvent, Error> {
+    func fetch(from url: URL) -> AsyncThrowingStream<DownloadTaskEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = session.downloadTask(with: url)
             states[task.taskIdentifier] = continuation

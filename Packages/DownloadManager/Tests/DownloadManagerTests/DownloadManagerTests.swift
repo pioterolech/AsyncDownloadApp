@@ -18,9 +18,9 @@ extension AsyncStream where Element == [Download] {
 // MARK: - Mock
 
 final class DownloadTaskMock: DownloadTaskProtocol, @unchecked Sendable {
-    var fetchHandler: ((URL) -> AsyncThrowingStream<DownloadEvent, Error>)?
+    var fetchHandler: ((URL) -> AsyncThrowingStream<DownloadTaskEvent, Error>)?
 
-    func fetch(from url: URL) async -> AsyncThrowingStream<DownloadEvent, Error> {
+    func fetch(from url: URL) async -> AsyncThrowingStream<DownloadTaskEvent, Error> {
         fetchHandler?(url) ?? AsyncThrowingStream { $0.finish() }
     }
 }
