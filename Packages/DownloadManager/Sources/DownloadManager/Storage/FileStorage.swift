@@ -1,13 +1,14 @@
 import Foundation
 
 // sourcery: AutoMockable
-public protocol DownloadStorageProtocol {
+public protocol FileStorageProtocol {
     func createTempFile(for id: UUID) -> URL
     func deleteTempFile(for id: UUID)
+    func saveTempFile(from location: URL) throws -> URL
     func moveToDocuments(from tempURL: URL, id: UUID, sourceURL: URL) throws -> URL
 }
 
-final class DownloadStorage: DownloadStorageProtocol {
+final class FileStorage: FileStorageProtocol {
 
     private let fileManager: FileManager
 
@@ -23,6 +24,12 @@ final class DownloadStorage: DownloadStorageProtocol {
 
     func deleteTempFile(for id: UUID) {
         try? fileManager.removeItem(at: tempURL(for: id))
+    }
+
+    func saveTempFile(from location: URL) throws -> URL {
+        let destination = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try fileManager.moveItem(at: location, to: destination)
+        return destination
     }
 
     func moveToDocuments(from tempURL: URL, id: UUID, sourceURL: URL) throws -> URL {

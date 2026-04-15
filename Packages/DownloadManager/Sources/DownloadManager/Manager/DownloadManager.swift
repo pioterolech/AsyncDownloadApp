@@ -2,20 +2,20 @@ import Foundation
 
 public actor DownloadManager {
     private let continuation: AsyncStream<[Download]>.Continuation
-    private let storage: any DownloadStorageProtocol
-    private let streamer: any NetworkBytesFetcherProtocol
+    private let storage: any FileStorageProtocol
+    private let downloadTask: any DownloadTaskProtocol
     private var downloads: [UUID: Download] = [:]
     private var tasks: [UUID: Task<Void, Never>] = [:]
 
     public let downloadStream: AsyncStream<[Download]>
 
     public init(
-        storage: any DownloadStorageProtocol,
-        streamer: any NetworkBytesFetcherProtocol
+        storage: any FileStorageProtocol,
+        downloadTask: any DownloadTaskProtocol
     ) {
         (downloadStream, continuation) = AsyncStream.makeStream()
         self.storage = storage
-        self.streamer = streamer
+        self.downloadTask = downloadTask
     }
 
     // MARK: - Public API
@@ -43,36 +43,32 @@ public actor DownloadManager {
 
     private func startTask(for id: UUID) {
         tasks[id] = Task {
-            await performDownload(id: id)
+            do {
+                try await performDownload(id: id)
+            } catch is CancellationError {
+                markCancelled(id: id)
+            } catch {
+                markFailed(id: id, error: .networkError(underlying: error))
+            }
+            tasks[id] = nil
         }
     }
 
-    private func performDownload(id: UUID) async {
+    private func performDownload(id: UUID) async throws {
         guard let download = downloads[id] else { return }
 
         markDownloading(id: id)
 
-        let tempURL = storage.createTempFile(for: id)
-
-        do {
-            try await streamer.fetch(from: download.url, into: tempURL) { received, total in
+        for try await event in await downloadTask.fetch(from: download.url) {
+            switch event {
+            case .progress(let received, let total):
                 updateProgress(id: id, received: received, total: total)
+            case .completed(let tempURL):
+                let destURL = try storage.moveToDocuments(from: tempURL, id: id, sourceURL: download.url)
+                markCompleted(id: id, fileURL: destURL)
             }
-            let destURL = try storage.moveToDocuments(
-                from: tempURL,
-                id: id,
-                sourceURL: download.url
-            )
-            markCompleted(id: id, fileURL: destURL)
-        } catch is CancellationError {
-            storage.deleteTempFile(for: id)
-            markCancelled(id: id)
-        } catch {
-            storage.deleteTempFile(for: id)
-            markFailed(id: id, error: .networkError(underlying: error))
         }
-
-        tasks[id] = nil
+        try Task.checkCancellation()
     }
 
     // MARK: - State updates
@@ -83,6 +79,7 @@ public actor DownloadManager {
     }
 
     private func markCompleted(id: UUID, fileURL: URL) {
+        guard downloads[id]?.state == .downloading else { return }
         downloads[id]?.state = .completed
         downloads[id]?.progress = 1.0
         downloads[id]?.fileURL = fileURL

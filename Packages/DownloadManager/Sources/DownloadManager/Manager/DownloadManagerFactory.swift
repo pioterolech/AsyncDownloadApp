@@ -2,16 +2,15 @@ import Foundation
 
 public final class DownloadManagerFactory {
 
-    private let session: URLSession
+    private let configuration: URLSessionConfiguration
 
-    public init(session: URLSession = .shared) {
-        self.session = session
+    public init(configuration: URLSessionConfiguration = .default) {
+        self.configuration = configuration
     }
 
     public func make() -> any DownloadManagerProtocol {
-        DownloadManager(
-            storage: DownloadStorage(),
-            streamer: NetworkBytesFetcher(session: session)
-        )
+        let storage = FileStorage()
+        let downloadTask = DownloadTaskFactory(configuration: configuration, storage: storage).make()
+        return DownloadManager(storage: storage, downloadTask: downloadTask)
     }
 }

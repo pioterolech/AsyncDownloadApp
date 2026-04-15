@@ -4,9 +4,9 @@
 import Foundation
 @testable import DownloadManager
 
-// MARK: - DownloadStorageProtocolMock
+// MARK: - FileStorageProtocolMock
 
-final class DownloadStorageProtocolMock: DownloadStorageProtocol, @unchecked Sendable {
+final class FileStorageProtocolMock: FileStorageProtocol, @unchecked Sendable {
 
     // MARK: createTempFile
 
@@ -28,6 +28,20 @@ final class DownloadStorageProtocolMock: DownloadStorageProtocol, @unchecked Sen
     func deleteTempFile(for id: UUID) {
         deleteTempFileCallCount += 1
         deleteTempFileReceivedId = id
+    }
+
+    // MARK: saveTempFile
+
+    var saveTempFileCallCount = 0
+    var saveTempFileReceivedLocation: URL?
+    var saveTempFileThrowableError: Error?
+    var saveTempFileReturnValue: URL!
+
+    func saveTempFile(from location: URL) throws -> URL {
+        saveTempFileCallCount += 1
+        saveTempFileReceivedLocation = location
+        if let error = saveTempFileThrowableError { throw error }
+        return saveTempFileReturnValue
     }
 
     // MARK: moveToDocuments

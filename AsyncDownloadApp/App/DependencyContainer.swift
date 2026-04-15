@@ -14,8 +14,8 @@ final class DependencyContainer: ObservableObject {
 
     // MARK: - Init
 
-    init(session: URLSession = .shared) {
-        downloadManager = DownloadManagerFactory(session: session).make()
+    init() {
+        downloadManager = DownloadManagerFactory(configuration: .default).make()
         downloadListViewModel = DownloadListViewModel(downloadManager: downloadManager)
     }
 
