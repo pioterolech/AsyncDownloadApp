@@ -23,9 +23,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.AsyncDownloadApp
         SWIFT_VERSION: "5.9"
         INFOPLIST_FILE: AsyncDownloadApp/Info.plist
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
     preBuildScripts:
       - name: Regenerate Mocks
         script: |
+          export PATH="$PATH:/opt/homebrew/bin"
           cd "$SRCROOT/Packages/DownloadManager"
           if which mint > /dev/null; then
             mint run sourcery --disableCache
