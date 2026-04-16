@@ -1,6 +1,6 @@
 import Foundation
 
-public actor DownloadManager {
+public actor DownloadManager: DownloadManagerProtocol {
     private let continuation: AsyncStream<[Download]>.Continuation
     private let storage: any FileStorageProtocol
     private let downloadTask: any DownloadTaskProtocol
