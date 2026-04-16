@@ -4,7 +4,7 @@ public final class DownloadManagerFactory {
 
     private let configuration: URLSessionConfiguration
 
-    public init(configuration: URLSessionConfiguration = .default) {
+    public init(configuration: URLSessionConfiguration) {
         self.configuration = configuration
     }
 
