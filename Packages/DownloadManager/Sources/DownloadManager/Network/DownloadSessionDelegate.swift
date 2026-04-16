@@ -2,7 +2,7 @@ import Foundation
 
 final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
 
-    weak var delegate: (any DownloadTaskDelegate)?
+    nonisolated(unsafe) weak var delegate: (any DownloadTaskDelegate)?
 
     func urlSession(
         _ session: URLSession,

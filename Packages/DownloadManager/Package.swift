@@ -8,10 +8,18 @@ let package = Package(
         .library(name: "DownloadManager", targets: ["DownloadManager"]),
     ],
     targets: [
-        .target(name: "DownloadManager"),
+        .target(
+            name: "DownloadManager",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
+            ]
+        ),
         .testTarget(
             name: "DownloadManagerTests",
-            dependencies: ["DownloadManager"]
+            dependencies: ["DownloadManager"],
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
+            ]
         ),
     ]
 )

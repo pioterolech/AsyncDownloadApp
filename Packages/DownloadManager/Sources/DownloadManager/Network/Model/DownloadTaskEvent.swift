@@ -1,6 +1,6 @@
 import Foundation
 
-public enum DownloadTaskEvent {
+public enum DownloadTaskEvent: Sendable {
     case progress(Int64, Int64)
     case completed(URL)
 }

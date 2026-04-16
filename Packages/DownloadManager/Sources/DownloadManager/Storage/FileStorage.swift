@@ -1,14 +1,14 @@
 import Foundation
 
 // sourcery: AutoMockable
-public protocol FileStorageProtocol {
+public protocol FileStorageProtocol: Sendable {
     func createTempFile(for id: UUID) -> URL
     func deleteTempFile(for id: UUID)
     func saveTempFile(from location: URL) throws -> URL
     func moveToDocuments(from tempURL: URL, id: UUID, sourceURL: URL) throws -> URL
 }
 
-final class FileStorage: FileStorageProtocol {
+final class FileStorage: FileStorageProtocol, @unchecked Sendable {
 
     private let fileManager: FileManager
 
