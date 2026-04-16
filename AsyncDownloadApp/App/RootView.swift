@@ -5,19 +5,18 @@ struct RootView: View {
     @StateObject private var container = DependencyContainer()
 
     var body: some View {
-        NavigationStack(path: $coordinator.path) {
+        NavigationStack {
             DownloadListView(
                 viewModel: container.downloadListViewModel,
                 onAddTapped: { coordinator.showAddLink() }
             )
-            .navigationDestination(for: Route.self) { route in
-                switch route {
-                case .addLink:
-                    AddLinkView(
-                        viewModel: container.makeAddLinkViewModel(),
-                        onDismiss: { coordinator.dismissAddLink() }
-                    )
-                }
+        }
+        .sheet(isPresented: $coordinator.isAddLinkPresented) {
+            NavigationStack {
+                AddLinkView(
+                    viewModel: container.makeAddLinkViewModel(),
+                    onDismiss: { coordinator.dismissAddLink() }
+                )
             }
         }
     }

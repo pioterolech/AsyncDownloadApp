@@ -1,18 +1,14 @@
 import SwiftUI
 
-enum Route: Hashable {
-    case addLink
-}
-
 @MainActor
 final class AppCoordinator: ObservableObject {
-    @Published var path = NavigationPath()
+    @Published var isAddLinkPresented = false
 
     func showAddLink() {
-        path.append(Route.addLink)
+        isAddLinkPresented = true
     }
 
     func dismissAddLink() {
-        path.removeLast()
+        isAddLinkPresented = false
     }
 }
