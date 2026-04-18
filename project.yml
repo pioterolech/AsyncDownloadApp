@@ -21,7 +21,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.AsyncDownloadApp
-        SWIFT_VERSION: "5.9"
+        SWIFT_VERSION: "6.1"
         INFOPLIST_FILE: AsyncDownloadApp/Info.plist
         ENABLE_USER_SCRIPT_SANDBOXING: NO
     preBuildScripts:
