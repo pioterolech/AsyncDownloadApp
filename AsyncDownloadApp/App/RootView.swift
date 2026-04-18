@@ -2,7 +2,9 @@ import SwiftUI
 
 struct RootView: View {
     @StateObject private var coordinator = AppCoordinator()
-    @StateObject private var container = DependencyContainer()
+    @StateObject private var container = ViewModelsDependencyContainer(
+        managers: ManagersDependencyContainer()
+    )
 
     var body: some View {
         NavigationStack {
