@@ -5,7 +5,7 @@ import DownloadManager
 final class ManagersDependencyContainer {
     let downloadManager: any DownloadManagerProtocol
 
-    init() {
-        downloadManager = DownloadManagerFactory().make()
+    init() throws {
+        downloadManager = try DownloadManagerFactory().make()
     }
 }

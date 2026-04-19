@@ -1,4 +1,4 @@
-public enum DownloadState: Sendable, Equatable {
+public enum DownloadState: String, Sendable, Equatable {
     case queued
     case downloading
     case completed

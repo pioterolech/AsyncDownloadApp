@@ -3,21 +3,17 @@ import Foundation
 actor DownloadTask: DownloadTaskProtocol {
 
     private let session: any URLSessionProtocol
-    private let storage: any FileStorageProtocol
     private var states: [Int: AsyncThrowingStream<DownloadTaskEvent, Error>.Continuation] = [:]
 
-    init(session: any URLSessionProtocol, storage: any FileStorageProtocol) {
+    init(session: any URLSessionProtocol) {
         self.session = session
-        self.storage = storage
     }
 
     func fetch(from url: URL) -> AsyncThrowingStream<DownloadTaskEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = session.downloadTask(with: url)
             states[task.taskIdentifier] = continuation
-            continuation.onTermination = {
-                _ in task.cancel()
-            }
+            continuation.onTermination = { _ in task.cancel() }
             task.resume()
         }
     }
@@ -31,13 +27,8 @@ extension DownloadTask: DownloadTaskDelegate {
 
     func complete(for taskID: Int, location: URL) {
         let continuation = states.removeValue(forKey: taskID)
-        do {
-            let tempURL = try storage.saveTempFile(from: location)
-            continuation?.yield(.completed(tempURL))
-            continuation?.finish()
-        } catch {
-            continuation?.finish(throwing: error)
-        }
+        continuation?.yield(.completed(location))
+        continuation?.finish()
     }
 
     func fail(for taskID: Int, error: Error) {

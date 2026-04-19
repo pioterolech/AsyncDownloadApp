@@ -3,6 +3,11 @@ import Foundation
 final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
 
     nonisolated(unsafe) weak var delegate: (any DownloadTaskDelegate)?
+    private let storage: any FileStorageProtocol
+
+    init(storage: any FileStorageProtocol) {
+        self.storage = storage
+    }
 
     func urlSession(
         _ session: URLSession,
@@ -20,7 +25,12 @@ final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
-        Task { await self.delegate?.complete(for: downloadTask.taskIdentifier, location: location) }
+        do {
+            let savedURL = try storage.saveTempFile(from: location)
+            Task { await self.delegate?.complete(for: downloadTask.taskIdentifier, location: savedURL) }
+        } catch {
+            Task { await self.delegate?.fail(for: downloadTask.taskIdentifier, error: error) }
+        }
     }
 
     func urlSession(

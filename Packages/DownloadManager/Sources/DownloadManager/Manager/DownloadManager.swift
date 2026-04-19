@@ -2,44 +2,75 @@ import Foundation
 
 public actor DownloadManager: DownloadManagerProtocol {
     private let continuation: AsyncStream<[Download]>.Continuation
-    private let storage: any FileStorageProtocol
+    private let fileStorage: any FileStorageProtocol
     private let downloadTask: any DownloadTaskProtocol
+    private let downloadStorage: DownloadStorage
     private var downloads: [UUID: Download] = [:]
     private var tasks: [UUID: Task<Void, Never>] = [:]
 
     public let downloadStream: AsyncStream<[Download]>
 
     public init(
-        storage: any FileStorageProtocol,
-        downloadTask: any DownloadTaskProtocol
+        fileStorage: any FileStorageProtocol,
+        downloadTask: any DownloadTaskProtocol,
+        downloadStorage: DownloadStorage
     ) {
         (downloadStream, continuation) = AsyncStream.makeStream()
-        self.storage = storage
+        self.fileStorage = fileStorage
         self.downloadTask = downloadTask
+        self.downloadStorage = downloadStorage
+        Task { await self.restorePersistedDownloads() }
     }
 
     // MARK: - Public API
 
-    public func add(url: URL) {
+    public func add(url: URL) async {
         let download = Download(url: url, state: .queued)
         downloads[download.id] = download
         emit()
+        persist(download)
         startTask(for: download.id)
     }
 
-    public func cancel(id: UUID) {
+    public func cancel(id: UUID) async {
         tasks[id]?.cancel()
         tasks[id] = nil
     }
 
-    public func remove(id: UUID) {
+    public func remove(id: UUID) async {
         tasks[id]?.cancel()
         tasks[id] = nil
         downloads[id] = nil
         emit()
+        Task { try? await self.downloadStorage.delete(id: id) }
     }
 
     // MARK: - Private
+
+    private func restorePersistedDownloads() async {
+        guard let records = try? await downloadStorage.fetchAll() else { return }
+        for record in records {
+            guard var download = try? Download(persisted: record) else { continue }
+            if download.state == .queued || download.state == .downloading {
+                download.state = .cancelled
+                download.progress = 0
+                persist(download)
+            }
+            downloads[download.id] = download
+        }
+        emit()
+    }
+
+    private func persist(_ download: Download) {
+        let record = PersistedDownload(
+            id: download.id,
+            urlString: download.url.absoluteString,
+            stateRaw: download.state.rawValue,
+            progress: download.progress,
+            fileURLString: download.fileURL?.absoluteString
+        )
+        Task { try? await self.downloadStorage.save(record) }
+    }
 
     private func startTask(for id: UUID) {
         tasks[id] = Task {
@@ -56,15 +87,13 @@ public actor DownloadManager: DownloadManagerProtocol {
 
     private func performDownload(id: UUID) async throws {
         guard let download = downloads[id] else { return }
-
         markDownloading(id: id)
-
         for try await event in await downloadTask.fetch(from: download.url) {
             switch event {
             case .progress(let received, let total):
                 updateProgress(id: id, received: received, total: total)
             case .completed(let tempURL):
-                let destURL = try storage.moveToDocuments(from: tempURL, id: id, sourceURL: download.url)
+                let destURL = try fileStorage.moveToDocuments(from: tempURL, id: id, sourceURL: download.url)
                 markCompleted(id: id, fileURL: destURL)
             }
         }
@@ -76,6 +105,7 @@ public actor DownloadManager: DownloadManagerProtocol {
     private func markDownloading(id: UUID) {
         downloads[id]?.state = .downloading
         emit()
+        if let download = downloads[id] { persist(download) }
     }
 
     private func markCompleted(id: UUID, fileURL: URL) {
@@ -84,18 +114,23 @@ public actor DownloadManager: DownloadManagerProtocol {
         downloads[id]?.progress = 1.0
         downloads[id]?.fileURL = fileURL
         emit()
+        if let download = downloads[id] { persist(download) }
     }
 
     private func markCancelled(id: UUID) {
+        guard downloads[id]?.state == .downloading || downloads[id]?.state == .queued else { return }
         downloads[id]?.state = .cancelled
         downloads[id]?.error = .cancelled
         emit()
+        if let download = downloads[id] { persist(download) }
     }
 
     private func markFailed(id: UUID, error: DownloadError) {
+        guard downloads[id]?.state == .downloading else { return }
         downloads[id]?.state = .failed
         downloads[id]?.error = error
         emit()
+        if let download = downloads[id] { persist(download) }
     }
 
     private func updateProgress(id: UUID, received: Int64, total: Int64) {

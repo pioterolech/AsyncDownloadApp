@@ -14,9 +14,9 @@ final class DownloadTaskFactory {
     }
 
     func make() -> DownloadTask {
-        let delegate = DownloadSessionDelegate()
+        let delegate = DownloadSessionDelegate(storage: storage)
         let session = URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
-        let task = DownloadTask(session: session, storage: storage)
+        let task = DownloadTask(session: session)
         delegate.delegate = task
         return task
     }
