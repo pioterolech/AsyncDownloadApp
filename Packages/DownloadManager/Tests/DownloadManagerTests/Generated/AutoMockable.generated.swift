@@ -4,6 +4,135 @@
 import Foundation
 @testable import DownloadManager
 
+// MARK: - DownloadManagerProtocolMock
+
+final class DownloadManagerProtocolMock: DownloadManagerProtocol, @unchecked Sendable {
+    var downloadStream: AsyncStream<[Download]>
+
+    init(downloadStream: AsyncStream<[Download]>) {
+        self.downloadStream = downloadStream
+    }
+
+
+    // MARK: add
+
+    var addCallCount = 0
+    var addReceivedUrl: URL?
+    var addHandler: ((URL) async -> Void)?
+
+    func add(url: URL) async {
+        addCallCount += 1
+        addReceivedUrl = url
+        if let handler = addHandler {
+            await handler(url)
+        }
+    }
+
+    // MARK: cancel
+
+    var cancelCallCount = 0
+    var cancelReceivedId: UUID?
+    var cancelHandler: ((UUID) async -> Void)?
+
+    func cancel(id: UUID) async {
+        cancelCallCount += 1
+        cancelReceivedId = id
+        if let handler = cancelHandler {
+            await handler(id)
+        }
+    }
+
+    // MARK: remove
+
+    var removeCallCount = 0
+    var removeReceivedId: UUID?
+    var removeThrowableError: Error?
+    var removeHandler: ((UUID) async throws -> Void)?
+
+    func remove(id: UUID) async throws {
+        removeCallCount += 1
+        removeReceivedId = id
+        if let error = removeThrowableError { throw error }
+        if let handler = removeHandler {
+            try await handler(id)
+        }
+    }
+}
+
+// MARK: - DownloadStorageProtocolMock
+
+final class DownloadStorageProtocolMock: DownloadStorageProtocol, @unchecked Sendable {
+
+    // MARK: save
+
+    var saveCallCount = 0
+    var saveReceivedRecord: PersistedDownload?
+    var saveThrowableError: Error?
+    var saveHandler: ((PersistedDownload) async throws -> Void)?
+
+    func save(_ record: PersistedDownload) async throws {
+        saveCallCount += 1
+        saveReceivedRecord = record
+        if let error = saveThrowableError { throw error }
+        if let handler = saveHandler {
+            try await handler(record)
+        }
+    }
+
+    // MARK: delete
+
+    var deleteCallCount = 0
+    var deleteReceivedId: UUID?
+    var deleteThrowableError: Error?
+    var deleteHandler: ((UUID) async throws -> Void)?
+
+    func delete(id: UUID) async throws {
+        deleteCallCount += 1
+        deleteReceivedId = id
+        if let error = deleteThrowableError { throw error }
+        if let handler = deleteHandler {
+            try await handler(id)
+        }
+    }
+
+    // MARK: fetchAll
+
+    var fetchAllCallCount = 0
+    var fetchAllThrowableError: Error?
+    var fetchAllReturnValue: [PersistedDownload]!
+    var fetchAllHandler: (() async throws -> [PersistedDownload])?
+
+    func fetchAll() async throws -> [PersistedDownload] {
+        fetchAllCallCount += 1
+        if let error = fetchAllThrowableError { throw error }
+        if let handler = fetchAllHandler {
+            return try await handler()
+        }
+        return fetchAllReturnValue
+    }
+}
+
+// MARK: - DownloadTaskProtocolMock
+
+final class DownloadTaskProtocolMock: DownloadTaskProtocol, @unchecked Sendable {
+
+    // MARK: fetch
+
+    var fetchCallCount = 0
+    var fetchReceivedUrl: URL?
+    var fetchReturnValue: AsyncThrowingStream<DownloadTaskEvent, Error>!
+    var fetchHandler: ((URL) async -> AsyncThrowingStream<DownloadTaskEvent, Error>)?
+
+    func fetch(from url: URL) async -> AsyncThrowingStream<DownloadTaskEvent, Error> {
+        fetchCallCount += 1
+        fetchReceivedUrl = url
+        if let handler = fetchHandler {
+            return await handler(url)
+        }
+        return fetchReturnValue
+    }
+}
+
 // MARK: - FileStorageProtocolMock
 
 final class FileStorageProtocolMock: FileStorageProtocol, @unchecked Sendable {
@@ -85,5 +214,22 @@ final class NetworkBytesFetcherProtocolMock: NetworkBytesFetcherProtocol, @unche
                 try await handler(url, fileURL, escaping)
             }
         }
+    }
+}
+
+// MARK: - URLSessionProtocolMock
+
+final class URLSessionProtocolMock: URLSessionProtocol, @unchecked Sendable {
+
+    // MARK: downloadTask
+
+    var downloadTaskCallCount = 0
+    var downloadTaskReceivedUrl: URL?
+    var downloadTaskReturnValue: URLSessionDownloadTask!
+
+    func downloadTask(with url: URL) -> URLSessionDownloadTask {
+        downloadTaskCallCount += 1
+        downloadTaskReceivedUrl = url
+        return downloadTaskReturnValue
     }
 }

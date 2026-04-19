@@ -6,6 +6,18 @@ import Foundation
 // MARK: - {{ type.name }}Mock
 
 final class {{ type.name }}Mock: {{ type.name }}, @unchecked Sendable {
+{% for variable in type.variables %}
+    var {{ variable.name }}: {{ variable.typeName }}{% if variable.isOptional %} = nil{% endif %}
+
+{% endfor %}
+{% if type.variables %}
+    init({% for variable in type.variables where not variable.isOptional %}{{ variable.name }}: {{ variable.typeName }}{% if not forloop.last %}, {% endif %}{% endfor %}) {
+{% for variable in type.variables where not variable.isOptional %}
+        self.{{ variable.name }} = {{ variable.name }}
+{% endfor %}
+    }
+
+{% endif %}
 {% for method in type.methods %}
 
     // MARK: {{ method.callName }}
@@ -18,12 +30,15 @@ final class {{ type.name }}Mock: {{ type.name }}, @unchecked Sendable {
     var {{ method.callName }}ThrowableError: Error?
 {% endif %}
 {% if method.isAsync %}
-    var {{ method.callName }}Handler: (({% for param in method.parameters %}{{ param.typeName.name }}{% if not forloop.last %}, {% endif %}{% endfor %}) async {% if method.throws %}throws {% endif %}-> Void)?
+{% if method.returnTypeName.name != "Void" %}
+    var {{ method.callName }}ReturnValue: {{ method.returnTypeName }}!
+{% endif %}
+    var {{ method.callName }}Handler: (({% for param in method.parameters %}{{ param.typeName.name }}{% if not forloop.last %}, {% endif %}{% endfor %}) async {% if method.throws %}throws {% endif %}-> {% if method.returnTypeName.name != "Void" %}{{ method.returnTypeName }}{% else %}Void{% endif %})?
 {% elif method.returnTypeName.name != "Void" %}
     var {{ method.callName }}ReturnValue: {{ method.returnTypeName }}!
 {% endif %}
 
-    func {{ method.callName }}({% for param in method.parameters %}{% if param.argumentLabel != param.name %}{{ param.argumentLabel }} {% endif %}{{ param.name }}: {{ param.typeName }}{% if not forloop.last %}, {% endif %}{% endfor %}){% if method.isAsync %} async{% endif %}{% if method.throws %} throws{% endif %}{% if method.returnTypeName.name != "Void" %} -> {{ method.returnTypeName }}{% endif %} {
+    func {{ method.callName }}({% for param in method.parameters %}{% if param.argumentLabel != param.name %}{% if param.argumentLabel %}{{ param.argumentLabel }}{% else %}_{% endif %} {% endif %}{{ param.name }}: {{ param.typeName }}{% if not forloop.last %}, {% endif %}{% endfor %}){% if method.isAsync %} async{% endif %}{% if method.throws %} throws{% endif %}{% if method.returnTypeName.name != "Void" %} -> {{ method.returnTypeName }}{% endif %} {
         {{ method.callName }}CallCount += 1
 {% for param in method.parameters where not param.typeName.closure %}
         {{ method.callName }}Received{{ param.name|capitalize }} = {{ param.name }}
@@ -33,12 +48,15 @@ final class {{ type.name }}Mock: {{ type.name }}, @unchecked Sendable {
 {% endif %}
 {% if method.isAsync %}
         if let handler = {{ method.callName }}Handler {
-            {% for param in method.parameters where param.typeName.closure %}{% if forloop.first %}{% if method.throws %}try {% endif %}await withoutActuallyEscaping({{ param.name }}) { escaping in
+            {% for param in method.parameters where param.typeName.closure %}{% if forloop.first %}{% if method.returnTypeName.name != "Void" %}return {% endif %}{% if method.throws %}try {% endif %}await withoutActuallyEscaping({{ param.name }}) { escaping in
                 {% if method.throws %}try {% endif %}await handler({% for p in method.parameters %}{% if p.typeName.closure %}escaping{% else %}{{ p.name }}{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %})
             }
-            {% endif %}{% empty %}{% if method.throws %}try {% endif %}await handler({% for param in method.parameters %}{{ param.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
+            {% endif %}{% empty %}{% if method.returnTypeName.name != "Void" %}return {% endif %}{% if method.throws %}try {% endif %}await handler({% for param in method.parameters %}{{ param.name }}{% if not forloop.last %}, {% endif %}{% endfor %})
             {% endfor %}
         }
+{% if method.returnTypeName.name != "Void" %}
+        return {{ method.callName }}ReturnValue
+{% endif %}
 {% elif method.returnTypeName.name != "Void" %}
         return {{ method.callName }}ReturnValue
 {% endif %}

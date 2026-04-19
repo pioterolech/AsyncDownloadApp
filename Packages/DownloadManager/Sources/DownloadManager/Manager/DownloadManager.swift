@@ -4,7 +4,7 @@ public actor DownloadManager: DownloadManagerProtocol {
     private let continuation: AsyncStream<[Download]>.Continuation
     private let fileStorage: any FileStorageProtocol
     private let downloadTask: any DownloadTaskProtocol
-    private let downloadStorage: DownloadStorage
+    private let downloadStorage: any DownloadStorageProtocol
     private var downloads: [UUID: Download] = [:]
     private var tasks: [UUID: Task<Void, Never>] = [:]
 
@@ -13,7 +13,7 @@ public actor DownloadManager: DownloadManagerProtocol {
     public init(
         fileStorage: any FileStorageProtocol,
         downloadTask: any DownloadTaskProtocol,
-        downloadStorage: DownloadStorage
+        downloadStorage: any DownloadStorageProtocol
     ) {
         (downloadStream, continuation) = AsyncStream.makeStream()
         self.fileStorage = fileStorage
@@ -28,7 +28,7 @@ public actor DownloadManager: DownloadManagerProtocol {
         let download = Download(url: url, state: .queued)
         downloads[download.id] = download
         emit()
-        persist(download)
+        await persist(download)
         startTask(for: download.id)
     }
 
@@ -37,31 +37,31 @@ public actor DownloadManager: DownloadManagerProtocol {
         tasks[id] = nil
     }
 
-    public func remove(id: UUID) async {
+    public func remove(id: UUID) async throws {
         tasks[id]?.cancel()
         tasks[id] = nil
         downloads[id] = nil
         emit()
-        Task { try? await self.downloadStorage.delete(id: id) }
+        try await downloadStorage.delete(id: id)
     }
 
     // MARK: - Private
 
     private func restorePersistedDownloads() async {
-        guard let records = try? await downloadStorage.fetchAll() else { return }
+        guard let records = try? await downloadStorage.fetchAll(), !records.isEmpty else { return }
         for record in records {
             guard var download = try? Download(persisted: record) else { continue }
             if download.state == .queued || download.state == .downloading {
                 download.state = .cancelled
                 download.progress = 0
-                persist(download)
+                await persist(download)
             }
             downloads[download.id] = download
         }
         emit()
     }
 
-    private func persist(_ download: Download) {
+    private func persist(_ download: Download) async {
         let record = PersistedDownload(
             id: download.id,
             urlString: download.url.absoluteString,
@@ -69,7 +69,7 @@ public actor DownloadManager: DownloadManagerProtocol {
             progress: download.progress,
             fileURLString: download.fileURL?.absoluteString
         )
-        Task { try? await self.downloadStorage.save(record) }
+        try? await downloadStorage.save(record)
     }
 
     private func startTask(for id: UUID) {
@@ -77,9 +77,9 @@ public actor DownloadManager: DownloadManagerProtocol {
             do {
                 try await performDownload(id: id)
             } catch is CancellationError {
-                markCancelled(id: id)
+                await markCancelled(id: id)
             } catch {
-                markFailed(id: id, error: .networkError(underlying: error))
+                await markFailed(id: id, error: .networkError(underlying: error))
             }
             tasks[id] = nil
         }
@@ -87,14 +87,14 @@ public actor DownloadManager: DownloadManagerProtocol {
 
     private func performDownload(id: UUID) async throws {
         guard let download = downloads[id] else { return }
-        markDownloading(id: id)
+        await markDownloading(id: id)
         for try await event in await downloadTask.fetch(from: download.url) {
             switch event {
             case .progress(let received, let total):
                 updateProgress(id: id, received: received, total: total)
             case .completed(let tempURL):
                 let destURL = try fileStorage.moveToDocuments(from: tempURL, id: id, sourceURL: download.url)
-                markCompleted(id: id, fileURL: destURL)
+                await markCompleted(id: id, fileURL: destURL)
             }
         }
         try Task.checkCancellation()
@@ -102,35 +102,35 @@ public actor DownloadManager: DownloadManagerProtocol {
 
     // MARK: - State updates
 
-    private func markDownloading(id: UUID) {
+    private func markDownloading(id: UUID) async {
         downloads[id]?.state = .downloading
         emit()
-        if let download = downloads[id] { persist(download) }
+        if let download = downloads[id] { await persist(download) }
     }
 
-    private func markCompleted(id: UUID, fileURL: URL) {
+    private func markCompleted(id: UUID, fileURL: URL) async {
         guard downloads[id]?.state == .downloading else { return }
         downloads[id]?.state = .completed
         downloads[id]?.progress = 1.0
         downloads[id]?.fileURL = fileURL
         emit()
-        if let download = downloads[id] { persist(download) }
+        if let download = downloads[id] { await persist(download) }
     }
 
-    private func markCancelled(id: UUID) {
+    private func markCancelled(id: UUID) async {
         guard downloads[id]?.state == .downloading || downloads[id]?.state == .queued else { return }
         downloads[id]?.state = .cancelled
         downloads[id]?.error = .cancelled
         emit()
-        if let download = downloads[id] { persist(download) }
+        if let download = downloads[id] { await persist(download) }
     }
 
-    private func markFailed(id: UUID, error: DownloadError) {
+    private func markFailed(id: UUID, error: DownloadError) async {
         guard downloads[id]?.state == .downloading else { return }
         downloads[id]?.state = .failed
         downloads[id]?.error = error
         emit()
-        if let download = downloads[id] { persist(download) }
+        if let download = downloads[id] { await persist(download) }
     }
 
     private func updateProgress(id: UUID, received: Int64, total: Int64) {

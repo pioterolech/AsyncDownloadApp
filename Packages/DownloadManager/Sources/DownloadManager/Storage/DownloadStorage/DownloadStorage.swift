@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @ModelActor
-public actor DownloadStorage {
+public actor DownloadStorage: DownloadStorageProtocol {
 
     public static func makeContainer() throws -> ModelContainer {
         try ModelContainer(for: PersistedDownload.self)
