@@ -143,7 +143,7 @@ struct DownloadManagerTests {
     func queuedDownloadsRestoredAsCancelled() async {
         // Given
         downloadStorage.fetchAllReturnValue = [
-            PersistedDownload(id: UUID(), urlString: url.absoluteString, stateRaw: DownloadState.queued.rawValue, progress: 0, fileURLString: nil)
+            Download(url: url, state: .queued)
         ]
 
         // When
@@ -158,7 +158,7 @@ struct DownloadManagerTests {
     func downloadingDownloadsRestoredAsCancelled() async {
         // Given
         downloadStorage.fetchAllReturnValue = [
-            PersistedDownload(id: UUID(), urlString: url.absoluteString, stateRaw: DownloadState.downloading.rawValue, progress: 0.5, fileURLString: nil)
+            Download(url: url, state: .downloading, progress: 0.5)
         ]
 
         // When
@@ -172,9 +172,9 @@ struct DownloadManagerTests {
     @Test("completed downloads are restored with their original state")
     func completedDownloadsRestoredAsCompleted() async {
         // Given
-        let fileURL = "file:///docs/file.zip"
+        let fileURL = URL(string: "file:///docs/file.zip")
         downloadStorage.fetchAllReturnValue = [
-            PersistedDownload(id: UUID(), urlString: url.absoluteString, stateRaw: DownloadState.completed.rawValue, progress: 1.0, fileURLString: fileURL)
+            Download(url: url, state: .completed, progress: 1.0, fileURL: fileURL)
         ]
 
         // When
@@ -267,6 +267,6 @@ struct DownloadManagerTests {
         await manager.add(url: url)
 
         // Then
-        #expect(downloadStorage.saveReceivedRecord?.urlString == url.absoluteString)
+        #expect(downloadStorage.saveReceivedDownload?.url == url)
     }
 }

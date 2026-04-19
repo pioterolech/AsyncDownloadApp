@@ -48,9 +48,8 @@ public actor DownloadManager: DownloadManagerProtocol {
     // MARK: - Private
 
     private func restorePersistedDownloads() async {
-        guard let records = try? await downloadStorage.fetchAll(), !records.isEmpty else { return }
-        for record in records {
-            guard var download = try? Download(persisted: record) else { continue }
+        guard let stored = try? await downloadStorage.fetchAll(), !stored.isEmpty else { return }
+        for var download in stored {
             if download.state == .queued || download.state == .downloading {
                 download.state = .cancelled
                 download.progress = 0
@@ -62,14 +61,7 @@ public actor DownloadManager: DownloadManagerProtocol {
     }
 
     private func persist(_ download: Download) async {
-        let record = PersistedDownload(
-            id: download.id,
-            urlString: download.url.absoluteString,
-            stateRaw: download.state.rawValue,
-            progress: download.progress,
-            fileURLString: download.fileURL?.absoluteString
-        )
-        try? await downloadStorage.save(record)
+        try? await downloadStorage.save(download)
     }
 
     private func startTask(for id: UUID) {

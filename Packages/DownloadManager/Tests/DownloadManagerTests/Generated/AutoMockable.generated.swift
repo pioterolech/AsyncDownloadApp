@@ -66,16 +66,16 @@ final class DownloadStorageProtocolMock: DownloadStorageProtocol, @unchecked Sen
     // MARK: save
 
     var saveCallCount = 0
-    var saveReceivedRecord: PersistedDownload?
+    var saveReceivedDownload: Download?
     var saveThrowableError: Error?
-    var saveHandler: ((PersistedDownload) async throws -> Void)?
+    var saveHandler: ((Download) async throws -> Void)?
 
-    func save(_ record: PersistedDownload) async throws {
+    func save(_ download: Download) async throws {
         saveCallCount += 1
-        saveReceivedRecord = record
+        saveReceivedDownload = download
         if let error = saveThrowableError { throw error }
         if let handler = saveHandler {
-            try await handler(record)
+            try await handler(download)
         }
     }
 
@@ -99,10 +99,10 @@ final class DownloadStorageProtocolMock: DownloadStorageProtocol, @unchecked Sen
 
     var fetchAllCallCount = 0
     var fetchAllThrowableError: Error?
-    var fetchAllReturnValue: [PersistedDownload]!
-    var fetchAllHandler: (() async throws -> [PersistedDownload])?
+    var fetchAllReturnValue: [Download]!
+    var fetchAllHandler: (() async throws -> [Download])?
 
-    func fetchAll() async throws -> [PersistedDownload] {
+    func fetchAll() async throws -> [Download] {
         fetchAllCallCount += 1
         if let error = fetchAllThrowableError { throw error }
         if let handler = fetchAllHandler {

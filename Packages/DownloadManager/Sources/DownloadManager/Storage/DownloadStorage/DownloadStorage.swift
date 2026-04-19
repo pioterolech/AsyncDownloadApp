@@ -8,13 +8,19 @@ public actor DownloadStorage: DownloadStorageProtocol {
         try ModelContainer(for: PersistedDownload.self)
     }
 
-    public func save(_ record: PersistedDownload) throws {
-        if let existing = try fetchRecord(id: record.id) {
-            existing.stateRaw = record.stateRaw
-            existing.progress = record.progress
-            existing.fileURLString = record.fileURLString
+    public func save(_ download: Download) throws {
+        if let existing = try fetchRecord(id: download.id) {
+            existing.stateRaw = download.state.rawValue
+            existing.progress = download.progress
+            existing.fileURLString = download.fileURL?.absoluteString
         } else {
-            modelContext.insert(record)
+            modelContext.insert(PersistedDownload(
+            id: download.id,
+            urlString: download.url.absoluteString,
+            stateRaw: download.state.rawValue,
+            progress: download.progress,
+            fileURLString: download.fileURL?.absoluteString
+        ))
         }
         try modelContext.save()
     }
@@ -25,15 +31,13 @@ public actor DownloadStorage: DownloadStorageProtocol {
         try modelContext.save()
     }
 
-    public func fetchAll() throws -> [PersistedDownload] {
-        try modelContext.fetch(FetchDescriptor<PersistedDownload>())
+    public func fetchAll() throws -> [Download] {
+        try modelContext.fetch(FetchDescriptor<PersistedDownload>()).compactMap(Download.init)
     }
 
     // MARK: - Private
 
     private func fetchRecord(id: UUID) throws -> PersistedDownload? {
-        var descriptor = FetchDescriptor<PersistedDownload>(predicate: #Predicate { $0.id == id })
-        descriptor.fetchLimit = 1
-        return try modelContext.fetch(descriptor).first
+        try modelContext.fetch(FetchDescriptor<PersistedDownload>()).first { $0.id == id }
     }
 }
