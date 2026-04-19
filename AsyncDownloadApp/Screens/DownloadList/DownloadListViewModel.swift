@@ -27,6 +27,6 @@ final class DownloadListViewModel: ObservableObject {
     }
 
     func remove(id: UUID) {
-        Task { await downloadManager.remove(id: id) }
+        Task { try await downloadManager.remove(id: id) }
     }
 }
