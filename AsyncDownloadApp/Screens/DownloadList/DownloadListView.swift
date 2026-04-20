@@ -16,11 +16,22 @@ struct DownloadListView: View {
             } else {
                 List {
                     ForEach(viewModel.downloads) { download in
-                        DownloadRowView(
-                            download: download,
-                            onCancel: { viewModel.cancel(id: download.id) },
-                            onRemove: { viewModel.remove(id: download.id) }
-                        )
+                        DownloadRowView(download: download)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    viewModel.remove(id: download.id)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                if download.state == .downloading || download.state == .queued {
+                                    Button {
+                                        viewModel.cancel(id: download.id)
+                                    } label: {
+                                        Label("Cancel", systemImage: "xmark")
+                                    }
+                                    .tint(.orange)
+                                }
+                            }
                     }
                 }
             }

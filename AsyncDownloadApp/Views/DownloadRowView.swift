@@ -3,8 +3,6 @@ import DownloadManager
 
 struct DownloadRowView: View {
     let download: Download
-    let onCancel: () -> Void
-    let onRemove: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -23,11 +21,7 @@ struct DownloadRowView: View {
                 ProgressView(value: download.progress)
             }
 
-            HStack {
-                stateLabel
-                Spacer()
-                actionButtons
-            }
+            stateLabel
         }
         .padding(.vertical, 4)
     }
@@ -62,20 +56,6 @@ struct DownloadRowView: View {
         case .cancelled:
             Label("Cancelled", systemImage: "slash.circle.fill")
                 .font(.caption).foregroundStyle(.secondary)
-        }
-    }
-
-    @ViewBuilder
-    private var actionButtons: some View {
-        HStack(spacing: 12) {
-            if download.state == .downloading || download.state == .queued {
-                Button(action: onCancel) {
-                    Image(systemName: "xmark")
-                }.buttonStyle(.borderless).foregroundStyle(.red)
-            }
-            Button(action: onRemove) {
-                Image(systemName: "trash")
-            }.buttonStyle(.borderless).foregroundStyle(.secondary)
         }
     }
 }
