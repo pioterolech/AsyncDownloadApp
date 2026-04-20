@@ -1,6 +1,7 @@
 # AsyncDownload
 
 [![Tests](https://github.com/pioterolech/AsyncDownloadApp/actions/workflows/tests.yml/badge.svg)](https://github.com/pioterolech/AsyncDownloadApp/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/pioterolech/AsyncDownloadApp/branch/main/graph/badge.svg)](https://codecov.io/gh/pioterolech/AsyncDownloadApp)
 
 An iOS app built to exercise modern Swift concurrency within a file downloading scenario — and to explore Claude's capabilities as a coding assistant.
 
