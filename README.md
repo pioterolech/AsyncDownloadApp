@@ -49,7 +49,7 @@ swift test
 **Architecture**
 - MVVM+C with `NavigationPath`-based coordinator
 - Local Swift Package (`DownloadManager`) isolating all download logic
-- Dependency injection via protocols (`DownloadStorageProtocol`, `NetworkBytesFetcherProtocol`, `DownloadManagerProtocol`)
+- Dependency injection via protocols (`DownloadStorageProtocol`, `DownloadManagerProtocol`)
 - Composition root (`DependencyContainer`) wiring dependencies at the app boundary
 
 **Testing**

@@ -192,31 +192,6 @@ final class FileStorageProtocolMock: FileStorageProtocol, @unchecked Sendable {
     }
 }
 
-// MARK: - NetworkBytesFetcherProtocolMock
-
-final class NetworkBytesFetcherProtocolMock: NetworkBytesFetcherProtocol, @unchecked Sendable {
-
-    // MARK: fetch
-
-    var fetchCallCount = 0
-    var fetchReceivedUrl: URL?
-    var fetchReceivedFileurl: URL?
-    var fetchThrowableError: Error?
-    var fetchHandler: ((URL, URL, (Int64, Int64) async -> Void) async throws -> Void)?
-
-    func fetch(from url: URL, into fileURL: URL, onProgress: (Int64, Int64) async -> Void) async throws {
-        fetchCallCount += 1
-        fetchReceivedUrl = url
-        fetchReceivedFileurl = fileURL
-        if let error = fetchThrowableError { throw error }
-        if let handler = fetchHandler {
-            try await withoutActuallyEscaping(onProgress) { escaping in
-                try await handler(url, fileURL, escaping)
-            }
-        }
-    }
-}
-
 // MARK: - URLSessionProtocolMock
 
 final class URLSessionProtocolMock: URLSessionProtocol, @unchecked Sendable {
