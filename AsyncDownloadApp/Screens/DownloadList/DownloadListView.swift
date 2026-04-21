@@ -1,9 +1,12 @@
 import SwiftUI
+import QuickLook
 import DownloadManager
 
 struct DownloadListView: View {
     @ObservedObject var viewModel: DownloadListViewModel
     let onAddTapped: () -> Void
+
+    @State private var previewURL: URL?
 
     var body: some View {
         Group {
@@ -17,6 +20,12 @@ struct DownloadListView: View {
                 List {
                     ForEach(viewModel.downloads) { download in
                         DownloadRowView(download: download)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                if let fileURL = download.fileURL {
+                                    previewURL = fileURL
+                                }
+                            }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button(role: .destructive) {
                                     viewModel.remove(id: download.id)
@@ -44,5 +53,6 @@ struct DownloadListView: View {
                 }
             }
         }
+        .quickLookPreview($previewURL)
     }
 }
