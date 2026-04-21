@@ -41,4 +41,8 @@ final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
         guard let error else { return }
         Task { await self.delegate?.fail(for: task.taskIdentifier, error: error) }
     }
+
+    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        Task { await self.delegate?.backgroundEventsDidFinish() }
+    }
 }
