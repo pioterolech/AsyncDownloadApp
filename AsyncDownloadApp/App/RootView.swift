@@ -4,8 +4,8 @@ struct RootView: View {
     @StateObject private var coordinator = AppCoordinator()
     private let containerResult: Result<ViewModelsDependencyContainer, Error>
 
-    init() {
-        containerResult = Result { try ViewModelsDependencyContainer() }
+    init(containerResult: Result<ViewModelsDependencyContainer, Error>) {
+        self.containerResult = containerResult
     }
 
     var body: some View {
@@ -24,19 +24,12 @@ struct RootView: View {
 
 private struct MainView: View {
     @ObservedObject var coordinator: AppCoordinator
-    @ObservedObject var container: ViewModelsDependencyContainer
-    @StateObject private var downloadListViewModel: DownloadListViewModel
-
-    init(coordinator: AppCoordinator, container: ViewModelsDependencyContainer) {
-        self.coordinator = coordinator
-        self.container = container
-        _downloadListViewModel = StateObject(wrappedValue: container.makeDownloadListViewModel())
-    }
+    var container: ViewModelsDependencyContainer
 
     var body: some View {
         NavigationStack {
             DownloadListView(
-                viewModel: downloadListViewModel,
+                viewModel: container.makeDownloadListViewModel(),
                 onAddTapped: { coordinator.showAddLink() }
             )
         }

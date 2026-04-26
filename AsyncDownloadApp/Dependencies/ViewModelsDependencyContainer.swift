@@ -2,12 +2,11 @@ import Foundation
 import DownloadManager
 
 @MainActor
-final class ViewModelsDependencyContainer: ObservableObject {
+struct ViewModelsDependencyContainer {
     private let downloadManager: any DownloadManagerProtocol
 
     init() throws {
-        let managers = try ManagersDependencyContainer()
-        self.downloadManager = managers.downloadManager
+        self.downloadManager = try DownloadManagerFactory().make()
     }
 
     func makeDownloadListViewModel() -> DownloadListViewModel {
