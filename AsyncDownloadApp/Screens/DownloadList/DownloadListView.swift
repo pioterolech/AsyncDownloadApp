@@ -3,8 +3,13 @@ import QuickLook
 import DownloadManager
 
 struct DownloadListView: View {
-    @ObservedObject var viewModel: DownloadListViewModel
+    @State private var viewModel: DownloadListViewModel
     let onAddTapped: () -> Void
+
+    init(viewModel: DownloadListViewModel, onAddTapped: @escaping () -> Void) {
+        _viewModel = State(wrappedValue: viewModel)
+        self.onAddTapped = onAddTapped
+    }
 
     @State private var previewURL: URL?
 
@@ -48,9 +53,7 @@ struct DownloadListView: View {
         .navigationTitle("Downloads")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button(action: onAddTapped) {
-                    Image(systemName: "plus")
-                }
+                Button("Add Download", systemImage: "plus", action: onAddTapped)
             }
         }
         .quickLookPreview($previewURL)

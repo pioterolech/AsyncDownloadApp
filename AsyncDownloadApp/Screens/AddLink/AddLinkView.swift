@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AddLinkView: View {
-    @ObservedObject var viewModel: AddLinkViewModel
+    @Bindable var viewModel: AddLinkViewModel
     let onDismiss: () -> Void
 
     @FocusState private var isFieldFocused: Bool

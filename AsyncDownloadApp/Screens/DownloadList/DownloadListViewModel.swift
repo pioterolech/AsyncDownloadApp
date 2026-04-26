@@ -2,8 +2,9 @@ import Foundation
 import DownloadManager
 
 @MainActor
-final class DownloadListViewModel: ObservableObject {
-    @Published private(set) var downloads: [Download] = []
+@Observable
+final class DownloadListViewModel {
+    private(set) var downloads: [Download] = []
 
     private let downloadManager: any DownloadManagerProtocol
     private var streamTask: Task<Void, Never>?
@@ -16,10 +17,6 @@ final class DownloadListViewModel: ObservableObject {
                 self.downloads = snapshot
             }
         }
-    }
-
-    deinit {
-        streamTask?.cancel()
     }
 
     func cancel(id: UUID) {

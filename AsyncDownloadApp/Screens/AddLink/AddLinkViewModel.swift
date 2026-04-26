@@ -2,9 +2,10 @@ import Foundation
 import DownloadManager
 
 @MainActor
-final class AddLinkViewModel: ObservableObject {
-    @Published var urlText: String = ""
-    @Published private(set) var validationError: String? = nil
+@Observable
+final class AddLinkViewModel {
+    var urlText: String = ""
+    private(set) var validationError: String? = nil
 
     private let downloadManager: any DownloadManagerProtocol
 
