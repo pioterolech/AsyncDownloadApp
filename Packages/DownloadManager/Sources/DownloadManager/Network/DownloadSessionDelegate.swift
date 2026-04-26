@@ -17,7 +17,8 @@ final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
         totalBytesExpectedToWrite: Int64
     ) {
         guard totalBytesExpectedToWrite > 0 else { return }
-        Task { await self.delegate?.progress(for: downloadTask.taskIdentifier, written: totalBytesWritten, total: totalBytesExpectedToWrite) }
+        let id = downloadTask.taskIdentifier
+        Task { await self.delegate?.progress(for: id, written: totalBytesWritten, total: totalBytesExpectedToWrite) }
     }
 
     func urlSession(
@@ -25,11 +26,12 @@ final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
+        let id = downloadTask.taskIdentifier
         do {
             let savedURL = try storage.saveTempFile(from: location)
-            Task { await self.delegate?.complete(for: downloadTask.taskIdentifier, location: savedURL) }
+            Task { await self.delegate?.complete(for: id, location: savedURL) }
         } catch {
-            Task { await self.delegate?.fail(for: downloadTask.taskIdentifier, error: error) }
+            Task { await self.delegate?.fail(for: id, error: error) }
         }
     }
 
@@ -39,10 +41,7 @@ final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
         didCompleteWithError error: Error?
     ) {
         guard let error else { return }
-        Task { await self.delegate?.fail(for: task.taskIdentifier, error: error) }
-    }
-
-    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-        Task { await self.delegate?.backgroundEventsDidFinish() }
+        let id = task.taskIdentifier
+        Task { await self.delegate?.fail(for: id, error: error) }
     }
 }

@@ -116,32 +116,6 @@ final class DownloadStorageProtocolMock: DownloadStorageProtocol, @unchecked Sen
 
 final class DownloadTaskProtocolMock: DownloadTaskProtocol, @unchecked Sendable {
 
-    // MARK: prepareForReconnection
-
-    var prepareForReconnectionCallCount = 0
-    var prepareForReconnectionHandler: (() async -> Void)?
-
-    func prepareForReconnection() async {
-        prepareForReconnectionCallCount += 1
-        if let handler = prepareForReconnectionHandler {
-            await handler()
-        }
-    }
-
-    // MARK: handleBackgroundEvents
-
-    var handleBackgroundEventsCallCount = 0
-    var handleBackgroundEventsHandler: ((() -> Void) async -> Void)?
-
-    func handleBackgroundEvents(completionHandler: @Sendable @escaping () -> Void) async {
-        handleBackgroundEventsCallCount += 1
-        if let handler = handleBackgroundEventsHandler {
-            await withoutActuallyEscaping(completionHandler) { escaping in
-                await handler(escaping)
-            }
-        }
-    }
-
     // MARK: fetch
 
     var fetchCallCount = 0
@@ -232,19 +206,5 @@ final class URLSessionProtocolMock: URLSessionProtocol, @unchecked Sendable {
         downloadTaskCallCount += 1
         downloadTaskReceivedUrl = url
         return downloadTaskReturnValue
-    }
-
-    // MARK: allDownloadTasks
-
-    var allDownloadTasksCallCount = 0
-    var allDownloadTasksReturnValue: [URLSessionDownloadTask]!
-    var allDownloadTasksHandler: (() async -> [URLSessionDownloadTask])?
-
-    func allDownloadTasks() async -> [URLSessionDownloadTask] {
-        allDownloadTasksCallCount += 1
-        if let handler = allDownloadTasksHandler {
-            return await handler()
-        }
-        return allDownloadTasksReturnValue
     }
 }

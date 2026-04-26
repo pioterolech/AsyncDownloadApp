@@ -19,7 +19,6 @@ public actor DownloadManager: DownloadManagerProtocol {
         self.fileStorage = fileStorage
         self.downloadTask = downloadTask
         self.downloadStorage = downloadStorage
-        Task { await self.restorePersistedDownloads() }
     }
 
     // MARK: - Public API
@@ -47,19 +46,6 @@ public actor DownloadManager: DownloadManagerProtocol {
 
     // MARK: - Private
 
-    private func restorePersistedDownloads() async {
-        guard let stored = try? await downloadStorage.fetchAll(), !stored.isEmpty else { return }
-        for var download in stored {
-            if download.state == .queued || download.state == .downloading {
-                download.state = .cancelled
-                download.progress = 0
-                await persist(download)
-            }
-            downloads[download.id] = download
-        }
-        emit()
-    }
-
     private func persist(_ download: Download) async {
         try? await downloadStorage.save(download)
     }
@@ -80,7 +66,8 @@ public actor DownloadManager: DownloadManagerProtocol {
     private func performDownload(id: UUID) async throws {
         guard let download = downloads[id] else { return }
         await markDownloading(id: id)
-        for try await event in await downloadTask.fetch(from: download.url) {
+        let stream = await downloadTask.fetch(from: download.url)
+        for try await event in stream {
             switch event {
             case .progress(let received, let total):
                 updateProgress(id: id, received: received, total: total)
