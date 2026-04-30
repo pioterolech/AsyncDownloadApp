@@ -5,8 +5,8 @@ import DownloadManager
 struct ViewModelsDependencyContainer {
     private let downloadManager: any DownloadManagerProtocol
 
-    init() throws {
-        self.downloadManager = try DownloadManagerFactory().make()
+    init(downloadManager: any DownloadManagerProtocol) {
+        self.downloadManager = downloadManager
     }
 
     func makeDownloadListViewModel() -> DownloadListViewModel {

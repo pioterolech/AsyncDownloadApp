@@ -7,6 +7,7 @@ public actor DownloadManager: DownloadManagerProtocol {
     private let downloadStorage: any DownloadStorageProtocol
     private var downloads: [UUID: Download] = [:]
     private var tasks: [UUID: Task<Void, Never>] = [:]
+    private var backgroundCompletionHandler: (@Sendable () -> Void)?
 
     public let downloadStream: AsyncStream<[Download]>
 
@@ -22,6 +23,23 @@ public actor DownloadManager: DownloadManagerProtocol {
     }
 
     // MARK: - Public API
+
+    public func startup() async throws {
+        let persisted = try await downloadStorage.fetchAll()
+        for download in persisted {
+            switch download.state {
+            case .queued, .downloading:
+                var updated = download
+                updated.state = .cancelled
+                updated.error = .cancelled
+                downloads[download.id] = updated
+                try await downloadStorage.save(updated)
+            case .completed, .failed, .cancelled:
+                downloads[download.id] = download
+            }
+        }
+        emit()
+    }
 
     public func add(url: URL) async {
         let download = Download(url: url, state: .queued)
@@ -42,6 +60,10 @@ public actor DownloadManager: DownloadManagerProtocol {
         downloads[id] = nil
         emit()
         try await downloadStorage.delete(id: id)
+    }
+
+    public func handleBackgroundEvents(completionHandler: @escaping @Sendable () -> Void) async {
+        backgroundCompletionHandler = completionHandler
     }
 
     // MARK: - Private
@@ -66,14 +88,15 @@ public actor DownloadManager: DownloadManagerProtocol {
     private func performDownload(id: UUID) async throws {
         guard let download = downloads[id] else { return }
         await markDownloading(id: id)
-        let stream = await downloadTask.fetch(from: download.url)
+        let stream = await downloadTask.fetch(from: download.url, id: id)
         for try await event in stream {
             switch event {
             case .progress(let received, let total):
                 updateProgress(id: id, received: received, total: total)
             case .completed(let tempURL):
-                let destURL = try fileStorage.moveToDocuments(from: tempURL, id: id, sourceURL: download.url)
-                await markCompleted(id: id, fileURL: destURL)
+                guard let current = downloads[id] else { continue }
+                let fileURL = try fileStorage.moveToDocuments(from: tempURL, id: id, sourceURL: current.url)
+                await markCompleted(id: id, fileURL: fileURL)
             }
         }
         try Task.checkCancellation()
@@ -120,5 +143,13 @@ public actor DownloadManager: DownloadManagerProtocol {
     private func emit() {
         let snapshot = Array(downloads.values).sorted { $0.url.absoluteString < $1.url.absoluteString }
         continuation.yield(snapshot)
+    }
+}
+
+extension DownloadManager: BackgroundEventsDelegate {
+    func urlSessionDidFinishEvents() async {
+        let handler = backgroundCompletionHandler
+        backgroundCompletionHandler = nil
+        DispatchQueue.main.async { handler?() }
     }
 }

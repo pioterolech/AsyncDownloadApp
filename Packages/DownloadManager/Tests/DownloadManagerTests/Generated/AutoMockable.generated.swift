@@ -14,6 +14,20 @@ final class DownloadManagerProtocolMock: DownloadManagerProtocol, @unchecked Sen
     }
 
 
+    // MARK: startup
+
+    var startupCallCount = 0
+    var startupThrowableError: Error?
+    var startupHandler: (() async throws -> Void)?
+
+    func startup() async throws {
+        startupCallCount += 1
+        if let error = startupThrowableError { throw error }
+        if let handler = startupHandler {
+            try await handler()
+        }
+    }
+
     // MARK: add
 
     var addCallCount = 0
@@ -55,6 +69,20 @@ final class DownloadManagerProtocolMock: DownloadManagerProtocol, @unchecked Sen
         if let error = removeThrowableError { throw error }
         if let handler = removeHandler {
             try await handler(id)
+        }
+    }
+
+    // MARK: handleBackgroundEvents
+
+    var handleBackgroundEventsCallCount = 0
+    var handleBackgroundEventsHandler: ((() -> Void) async -> Void)?
+
+    func handleBackgroundEvents(completionHandler: @Sendable @escaping () -> Void) async {
+        handleBackgroundEventsCallCount += 1
+        if let handler = handleBackgroundEventsHandler {
+            await withoutActuallyEscaping(completionHandler) { escaping in
+                await handler(escaping)
+            }
         }
     }
 }
@@ -120,14 +148,16 @@ final class DownloadTaskProtocolMock: DownloadTaskProtocol, @unchecked Sendable 
 
     var fetchCallCount = 0
     var fetchReceivedUrl: URL?
+    var fetchReceivedId: UUID?
     var fetchReturnValue: AsyncThrowingStream<DownloadTaskEvent, Error>!
-    var fetchHandler: ((URL) async -> AsyncThrowingStream<DownloadTaskEvent, Error>)?
+    var fetchHandler: ((URL, UUID) async -> AsyncThrowingStream<DownloadTaskEvent, Error>)?
 
-    func fetch(from url: URL) async -> AsyncThrowingStream<DownloadTaskEvent, Error> {
+    func fetch(from url: URL, id: UUID) async -> AsyncThrowingStream<DownloadTaskEvent, Error> {
         fetchCallCount += 1
         fetchReceivedUrl = url
+        fetchReceivedId = id
         if let handler = fetchHandler {
-            return await handler(url)
+            return await handler(url, id)
         }
         return fetchReturnValue
     }

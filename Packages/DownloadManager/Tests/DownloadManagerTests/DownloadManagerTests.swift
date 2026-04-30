@@ -27,10 +27,10 @@ struct DownloadManagerTests {
     @Test("add transitions through queued → downloading → completed")
     func addCompletesSuccessfully() async throws {
         // Given
-        let tempURL = URL(filePath: "/tmp/mock")
+        let tempURL = URL(filePath: "/tmp/mock.zip")
         let destURL = URL(filePath: "/docs/mock.zip")
         fileStorage.moveToDocumentsReturnValue = destURL
-        downloadTask.fetchHandler = { @Sendable _ in
+        downloadTask.fetchHandler = { @Sendable _, _ in
             AsyncThrowingStream { continuation in
                 continuation.yield(.progress(512, 1024))
                 continuation.yield(.progress(1024, 1024))
@@ -54,7 +54,7 @@ struct DownloadManagerTests {
     @Test("cancel transitions download to cancelled state")
     func cancelStopsDownload() async throws {
         // Given
-        downloadTask.fetchHandler = { @Sendable _ in AsyncThrowingStream { _ in } }
+        downloadTask.fetchHandler = { @Sendable _, _ in AsyncThrowingStream { _ in } }
         let manager = makeManager()
         await manager.add(url: url)
         let downloading = await manager.downloadStream.collect { $0.first?.state == .downloading }
@@ -71,9 +71,10 @@ struct DownloadManagerTests {
     @Test("remove eliminates download from stream")
     func removeDeletesDownload() async throws {
         // Given
-        let tempURL = URL(filePath: "/tmp/mock")
-        fileStorage.moveToDocumentsReturnValue = URL(filePath: "/docs/mock.zip")
-        downloadTask.fetchHandler = { @Sendable _ in
+        let tempURL = URL(filePath: "/tmp/mock.zip")
+        let destURL = URL(filePath: "/docs/mock.zip")
+        fileStorage.moveToDocumentsReturnValue = destURL
+        downloadTask.fetchHandler = { @Sendable _, _ in
             AsyncThrowingStream { continuation in
                 continuation.yield(.completed(tempURL))
                 continuation.finish()
@@ -96,7 +97,7 @@ struct DownloadManagerTests {
     func fetchErrorTransitionsToFailed() async throws {
         // Given
         struct FetchError: Error {}
-        downloadTask.fetchHandler = { @Sendable _ in
+        downloadTask.fetchHandler = { @Sendable _, _ in
             AsyncThrowingStream { continuation in
                 continuation.finish(throwing: FetchError())
             }
@@ -115,9 +116,10 @@ struct DownloadManagerTests {
     @Test("progress is reported during fetch")
     func progressIsUpdated() async throws {
         // Given
-        let tempURL = URL(filePath: "/tmp/mock")
-        fileStorage.moveToDocumentsReturnValue = URL(filePath: "/docs/mock.zip")
-        downloadTask.fetchHandler = { @Sendable _ in
+        let tempURL = URL(filePath: "/tmp/mock.zip")
+        let destURL = URL(filePath: "/docs/mock.zip")
+        fileStorage.moveToDocumentsReturnValue = destURL
+        downloadTask.fetchHandler = { @Sendable _, _ in
             AsyncThrowingStream { continuation in
                 continuation.yield(.progress(256, 1024))
                 continuation.yield(.progress(512, 1024))
@@ -140,7 +142,7 @@ struct DownloadManagerTests {
     // MARK: - State restoration
 
     @Test("queued downloads are restored as cancelled on launch")
-    func queuedDownloadsRestoredAsCancelled() async {
+    func queuedDownloadsRestoredAsCancelled() async throws {
         // Given
         downloadStorage.fetchAllReturnValue = [
             Download(url: url, state: .queued)
@@ -148,6 +150,7 @@ struct DownloadManagerTests {
 
         // When
         let manager = makeManager()
+        try await manager.startup()
         let emissions = await manager.downloadStream.collect { !$0.isEmpty }
 
         // Then
@@ -155,7 +158,7 @@ struct DownloadManagerTests {
     }
 
     @Test("downloading downloads are restored as cancelled on launch")
-    func downloadingDownloadsRestoredAsCancelled() async {
+    func downloadingDownloadsRestoredAsCancelled() async throws {
         // Given
         downloadStorage.fetchAllReturnValue = [
             Download(url: url, state: .downloading, progress: 0.5)
@@ -163,6 +166,7 @@ struct DownloadManagerTests {
 
         // When
         let manager = makeManager()
+        try await manager.startup()
         let emissions = await manager.downloadStream.collect { !$0.isEmpty }
 
         // Then
@@ -170,7 +174,7 @@ struct DownloadManagerTests {
     }
 
     @Test("completed downloads are restored with their original state")
-    func completedDownloadsRestoredAsCompleted() async {
+    func completedDownloadsRestoredAsCompleted() async throws {
         // Given
         let fileURL = URL(string: "file:///docs/file.zip")
         downloadStorage.fetchAllReturnValue = [
@@ -179,6 +183,7 @@ struct DownloadManagerTests {
 
         // When
         let manager = makeManager()
+        try await manager.startup()
         let emissions = await manager.downloadStream.collect { !$0.isEmpty }
 
         // Then
@@ -192,9 +197,10 @@ struct DownloadManagerTests {
     func errorAfterCompletionKeepsCompletedState() async {
         // Given
         struct LateError: Error {}
-        let tempURL = URL(filePath: "/tmp/mock")
-        fileStorage.moveToDocumentsReturnValue = URL(filePath: "/docs/mock.zip")
-        downloadTask.fetchHandler = { @Sendable _ in
+        let tempURL = URL(filePath: "/tmp/mock.zip")
+        let destURL = URL(filePath: "/docs/mock.zip")
+        fileStorage.moveToDocumentsReturnValue = destURL
+        downloadTask.fetchHandler = { @Sendable _, _ in
             AsyncThrowingStream { continuation in
                 continuation.yield(.completed(tempURL))
                 continuation.finish(throwing: LateError())
@@ -213,9 +219,10 @@ struct DownloadManagerTests {
     @Test("cancellation after completion does not overwrite completed state")
     func cancellationAfterCompletionKeepsCompletedState() async throws {
         // Given
-        let tempURL = URL(filePath: "/tmp/mock")
-        fileStorage.moveToDocumentsReturnValue = URL(filePath: "/docs/mock.zip")
-        downloadTask.fetchHandler = { @Sendable _ in
+        let tempURL = URL(filePath: "/tmp/mock.zip")
+        let destURL = URL(filePath: "/docs/mock.zip")
+        fileStorage.moveToDocumentsReturnValue = destURL
+        downloadTask.fetchHandler = { @Sendable _, _ in
             AsyncThrowingStream { continuation in
                 continuation.yield(.completed(tempURL))
                 continuation.finish()
@@ -238,9 +245,10 @@ struct DownloadManagerTests {
     @Test("remove deletes download from storage")
     func removeDeletesFromStorage() async throws {
         // Given
-        let tempURL = URL(filePath: "/tmp/mock")
-        fileStorage.moveToDocumentsReturnValue = URL(filePath: "/docs/mock.zip")
-        downloadTask.fetchHandler = { @Sendable _ in
+        let tempURL = URL(filePath: "/tmp/mock.zip")
+        let destURL = URL(filePath: "/docs/mock.zip")
+        fileStorage.moveToDocumentsReturnValue = destURL
+        downloadTask.fetchHandler = { @Sendable _, _ in
             AsyncThrowingStream { continuation in
                 continuation.yield(.completed(tempURL))
                 continuation.finish()

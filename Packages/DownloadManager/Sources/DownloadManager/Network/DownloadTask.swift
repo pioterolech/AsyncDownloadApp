@@ -9,9 +9,10 @@ actor DownloadTask: DownloadTaskProtocol {
         self.session = session
     }
 
-    func fetch(from url: URL) -> AsyncThrowingStream<DownloadTaskEvent, Error> {
+    func fetch(from url: URL, id: UUID) -> AsyncThrowingStream<DownloadTaskEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = session.downloadTask(with: url)
+            task.taskDescription = id.uuidString
             states[task.taskIdentifier] = continuation
             continuation.onTermination = { _ in task.cancel() }
             task.resume()
@@ -22,12 +23,13 @@ actor DownloadTask: DownloadTaskProtocol {
 extension DownloadTask: DownloadTaskDelegate {
 
     func progress(for taskID: Int, written: Int64, total: Int64) {
-        states[taskID]?.yield(.progress(written, total))
+        let continuation = states[taskID]
+        continuation?.yield(.progress(written, total))
     }
 
-    func complete(for taskID: Int, location: URL) {
+    func complete(for taskID: Int, tempURL: URL) {
         let continuation = states.removeValue(forKey: taskID)
-        continuation?.yield(.completed(location))
+        continuation?.yield(.completed(tempURL))
         continuation?.finish()
     }
 

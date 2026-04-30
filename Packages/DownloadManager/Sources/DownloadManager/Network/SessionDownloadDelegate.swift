@@ -1,12 +1,13 @@
 import Foundation
 
-final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
+final class SessionDownloadDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
 
     nonisolated(unsafe) weak var delegate: (any DownloadTaskDelegate)?
-    private let storage: any FileStorageProtocol
+    nonisolated(unsafe) weak var backgroundEventsDelegate: (any BackgroundEventsDelegate)?
+    private let fileStorage: any FileStorageProtocol
 
     init(storage: any FileStorageProtocol) {
-        self.storage = storage
+        self.fileStorage = storage
     }
 
     func urlSession(
@@ -26,12 +27,12 @@ final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
-        let id = downloadTask.taskIdentifier
+        let taskID = downloadTask.taskIdentifier
         do {
-            let savedURL = try storage.saveTempFile(from: location)
-            Task { await self.delegate?.complete(for: id, location: savedURL) }
+            let tempURL = try fileStorage.saveTempFile(from: location)
+            Task { await self.delegate?.complete(for: taskID, tempURL: tempURL) }
         } catch {
-            Task { await self.delegate?.fail(for: id, error: error) }
+            Task { await self.delegate?.fail(for: taskID, error: error) }
         }
     }
 
@@ -43,5 +44,9 @@ final class DownloadSessionDelegate: NSObject, URLSessionDownloadDelegate {
         guard let error else { return }
         let id = task.taskIdentifier
         Task { await self.delegate?.fail(for: id, error: error) }
+    }
+
+    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        Task { await self.backgroundEventsDelegate?.urlSessionDidFinishEvents() }
     }
 }
